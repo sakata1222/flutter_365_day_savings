@@ -6,11 +6,15 @@
 
 import 'package:flutter/material.dart';
 
+import 'dao/saving_state_dao.dart';
+import 'widget/progress_widget.dart';
+import 'widget/result_widget.dart';
+
 void main() => runApp(MyApp());
 
 /// This Widget is the main application widget.
 class MyApp extends StatelessWidget {
-  static const String _title = 'Flutter Code Sample';
+  static const String _title = '365 day savings';
 
   @override
   Widget build(BuildContext context) {
@@ -18,32 +22,81 @@ class MyApp extends StatelessWidget {
       title: _title,
       home: Scaffold(
         appBar: AppBar(title: Text(_title)),
-        body: MyStatelessWidget(),
+        body: ApplicationWidget(),
       ),
     );
+  }
+}
+
+class ApplicationWidget extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return ApplicationState();
+  }
+}
+
+class ApplicationState extends State<ApplicationWidget> {
+  ISavingStateDao dao = SavingStateDaoSqfliteImpl();
+  bool isInitialized = false;
+
+  @override
+  void initState() {
+    dao.init().then((v) => setState(() => isInitialized = true));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isInitialized) {
+      return Center(child: CircularProgressIndicator());
+    }
+    return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints viewportConstraints) {
+      double resultAreaHeight = 50;
+      double progressAreaHeight =
+          viewportConstraints.maxHeight - resultAreaHeight;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ListView(
+          padding: const EdgeInsets.all(8.0),
+          children: <Widget>[
+            ProgressWidget(
+              dao: dao,
+              height: progressAreaHeight,
+            ),
+            ResultWidget(height: resultAreaHeight),
+          ],
+        ),
+      );
+    });
   }
 }
 
 /// This is the stateless widget that the main application instantiates.
 class MyStatelessWidget extends StatelessWidget {
   MyStatelessWidget({Key key}) : super(key: key);
+  ISavingStateDao dao = SavingStateDaoSqfliteImpl();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        child: InkWell(
-          splashColor: Colors.blue.withAlpha(30),
-          onTap: () {
-            print('Card tapped.');
-          },
-          child: Container(
-            width: 300,
-            height: 100,
-            child: Text('A card that can be tapped'),
-          ),
+    dao.init();
+    return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints viewportConstraints) {
+      double resultAreaHeight = 50;
+      double progressAreaHeight =
+          viewportConstraints.maxHeight - resultAreaHeight;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ListView(
+          padding: const EdgeInsets.all(8.0),
+          children: <Widget>[
+            ProgressWidget(
+              dao: dao,
+              height: progressAreaHeight,
+            ),
+            ResultWidget(height: resultAreaHeight),
+          ],
         ),
-      ),
-    );
+      );
+    });
   }
 }
