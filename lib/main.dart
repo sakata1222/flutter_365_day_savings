@@ -5,10 +5,10 @@
 // entire card.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_365_day_savings/widget/days_widget.dart';
 
 import 'dao/saving_state_dao.dart';
 import 'widget/progress_widget.dart';
-import 'widget/result_widget.dart';
 
 void main() => runApp(MyApp());
 
@@ -21,7 +21,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: _title,
       home: Scaffold(
-        appBar: AppBar(title: Text(_title)),
+        appBar: PreferredSize(
+            preferredSize: Size.fromHeight(30.0),
+            child: AppBar(title: Text(_title))),
         body: ApplicationWidget(),
       ),
     );
@@ -51,49 +53,22 @@ class ApplicationState extends State<ApplicationWidget> {
     }
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints viewportConstraints) {
-      double resultAreaHeight = 50;
-      double progressAreaHeight =
-          viewportConstraints.maxHeight - resultAreaHeight;
+      double progressAreaHeight = 20;
+      double borderSpace = 5;
+      double daysWidgetHeight =
+          viewportConstraints.maxHeight - progressAreaHeight - borderSpace;
       return Align(
         alignment: Alignment.topCenter,
         child: ListView(
-          padding: const EdgeInsets.all(8.0),
+          padding: EdgeInsets.only(left: 8, right: 8),
           children: <Widget>[
-            ProgressWidget(
-              dao: dao,
-              height: progressAreaHeight,
-            ),
-            ResultWidget(height: resultAreaHeight),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-/// This is the stateless widget that the main application instantiates.
-class MyStatelessWidget extends StatelessWidget {
-  MyStatelessWidget({Key key}) : super(key: key);
-  ISavingStateDao dao = SavingStateDaoSqfliteImpl();
-
-  @override
-  Widget build(BuildContext context) {
-    dao.init();
-    return LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints viewportConstraints) {
-      double resultAreaHeight = 50;
-      double progressAreaHeight =
-          viewportConstraints.maxHeight - resultAreaHeight;
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ListView(
-          padding: const EdgeInsets.all(8.0),
-          children: <Widget>[
-            ProgressWidget(
-              dao: dao,
-              height: progressAreaHeight,
-            ),
-            ResultWidget(height: resultAreaHeight),
+            Padding(
+                padding: EdgeInsets.only(bottom: borderSpace),
+                child: DaysWidget(
+                  dao: dao,
+                  height: daysWidgetHeight,
+                )),
+            ProgressWidget(dao: dao, height: progressAreaHeight),
           ],
         ),
       );

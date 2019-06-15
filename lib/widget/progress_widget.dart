@@ -2,53 +2,25 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_365_day_savings/dao/saving_state_dao.dart';
 
-class ProgressWidget extends StatelessWidget {
+class ProgressWidget extends StatefulWidget {
   final ISavingStateDao dao;
   final double height;
 
   ProgressWidget({this.dao, this.height, Key key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints viewportConstraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: height),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                DaysGrid(
-                  dao: dao,
-                  height: height,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class DaysGrid extends StatefulWidget {
-  final ISavingStateDao dao;
-  final double height;
-
-  DaysGrid({this.dao, this.height, Key key}) : super(key: key);
-
-  @override
   State<StatefulWidget> createState() {
-    return DaysGridState(dao: dao, height: height);
+    return ProgressState(dao: dao, height: height);
   }
 }
 
-class DaysGridState extends State<DaysGrid> {
+class ProgressState extends State<ProgressWidget> {
   final ISavingStateDao dao;
-  final double height;
+  double height;
+
   Map<int, bool> _currentState;
 
-  DaysGridState({this.dao, this.height});
+  ProgressState({this.dao, this.height});
 
   @override
   void initState() {
@@ -58,71 +30,46 @@ class DaysGridState extends State<DaysGrid> {
   @override
   Widget build(BuildContext context) {
     if (_currentState == null) {
-      return Container();
+      return Center(child: CircularProgressIndicator());
     }
-    var days = new List.generate(365, (i) => i + 1)
-        .map((i) => RaisedButton(
-            padding: EdgeInsets.all(0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-            ),
-            onPressed: () => {},
-            child: Container(
-                padding: EdgeInsets.all(1),
-                child: Text(i.toString(),
-                    textAlign: TextAlign.center,
-                    style: new TextStyle(
-                      fontSize: 10.0,
-                    )))))
-        .toList();
+    int allCount = _currentState.values.length;
+    int savedCount =
+        _currentState.values.where((saved) => saved == true).length;
+    int totalSaved = savedCount > 0
+        ? _currentState.entries
+            .where((entry) => entry.value == true)
+            .map((entry) => entry.key)
+            .reduce((v1, v2) => v1 + v2)
+        : 0;
+    double progress = savedCount.toDouble() / allCount;
+    double padding = 0;
     return Container(
-        height: height,
-        child: GridView.count(
-          primary: false,
-          padding: EdgeInsets.all(3),
-          childAspectRatio: 2.0,
-          mainAxisSpacing: 3,
-          crossAxisSpacing: 3,
-          crossAxisCount: 10,
-          children: days,
+        height: height - (padding * 2),
+        padding: EdgeInsets.all(padding),
+        margin: EdgeInsets.all(0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Expanded(
+                child: Row(
+              children: <Widget>[
+                Text('Progress :'),
+                Expanded(
+                    child: Padding(
+                        padding: EdgeInsets.only(left: 3, right: 5),
+                        child: SizedBox(
+                            height: 10,
+                            child: LinearProgressIndicator(
+                              backgroundColor: Colors.black12,
+                              value: progress,
+                            )))),
+                Text(savedCount.toString() + ' / ' + allCount.toString()),
+              ],
+            )),
+            Padding(
+                padding: EdgeInsets.only(left: 15),
+                child: Text('\u00A5' + totalSaved.toString())),
+          ],
         ));
   }
 }
-//
-//class Hogehoge extends StatelessWidget {
-//  final ISavingStateDao dao;
-//  final double height;
-//
-//  Hogehoge({this.dao, this.height, Key key}) : super(key: key);
-//
-//  @override
-//  Widget build(BuildContext context) {
-//    var days = new List.generate(365, (i) => i + 1)
-//        .map((i) => RaisedButton(
-//            padding: EdgeInsets.all(0),
-//            shape: RoundedRectangleBorder(
-//              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-//            ),
-//            onPressed: () => {},
-//            child: Container(
-//                padding: EdgeInsets.all(1),
-//                child: Text(i.toString(),
-//                    textAlign: TextAlign.center,
-//                    style: new TextStyle(
-//                      fontSize: 10.0,
-//                    )))))
-//        .toList();
-//
-//    return Container(
-//        height: height,
-//        child: GridView.count(
-//          primary: false,
-//          padding: EdgeInsets.all(3),
-//          childAspectRatio: 2.0,
-//          mainAxisSpacing: 3,
-//          crossAxisSpacing: 3,
-//          crossAxisCount: 10,
-//          children: days,
-//        ));
-//  }
-//}

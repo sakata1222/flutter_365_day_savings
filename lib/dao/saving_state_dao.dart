@@ -28,11 +28,19 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
     db = await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
       db
-          .execute(
-              "CREATE TABLE State (day INTEGER PRIMARY KEY, state INTEGER)")
+          .execute('CREATE TABLE ' +
+              DayRecord.TABLE_NAME +
+              ' (' +
+              DayRecord.COLUMN_DAY +
+              ' INTEGER PRIMARY KEY, ' +
+              DayRecord.COLUMN_SAVED +
+              ' INTEGER)')
           .then((v) => {
                 new List.generate(365, (i) => i + 1).forEach((i) => {
-                      db.insert("State", {'day': i, 'state': NOT_SAVED})
+                      db.insert(DayRecord.TABLE_NAME, {
+                        DayRecord.COLUMN_DAY: i,
+                        DayRecord.COLUMN_SAVED: NOT_SAVED
+                      })
                     })
               });
     });
@@ -42,34 +50,36 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
   @override
   Future<Map<int, bool>> currentState() async {
     List<Map<String, dynamic>> allRecords = await db.query(DayRecord.TABLE_NAME,
-        columns: [DayRecord.COLUMN_DAY, DayRecord.COLUMN_STATE]);
+        columns: [DayRecord.COLUMN_DAY, DayRecord.COLUMN_SAVED]);
     return Map.fromIterable(allRecords.map((m) => DayRecord.fromMap(m)),
-        key: (r) => r.day, value: (r) => r.state == SAVED);
+        key: (r) => r.day, value: (r) => r.saved == SAVED);
   }
 
   @override
   void updateState(Map<int, bool> updatedState) {
-    updatedState.forEach((id, state) =>
-        db.update("State", {'day': id, 'state': state == true ? 1 : 0}));
+    updatedState.forEach((id, saved) => db.update(DayRecord.TABLE_NAME, {
+          DayRecord.COLUMN_DAY: id,
+          DayRecord.COLUMN_SAVED: saved == true ? 1 : 0
+        }));
   }
 }
 
 class DayRecord {
-  static const TABLE_NAME = "State";
+  static const TABLE_NAME = "SavingState";
 
   static const String COLUMN_DAY = 'day';
-  static const String COLUMN_STATE = 'state';
+  static const String COLUMN_SAVED = 'saved';
   int day;
-  int state;
+  int saved;
 
-  DayRecord({this.day, this.state});
+  DayRecord({this.day, this.saved});
 
   Map<String, dynamic> toMap() {
-    return {COLUMN_DAY: day, COLUMN_STATE: state};
+    return {COLUMN_DAY: day, COLUMN_SAVED: saved};
   }
 
   DayRecord.fromMap(Map<String, dynamic> map) {
     day = map[COLUMN_DAY];
-    state = map[COLUMN_STATE];
+    saved = map[COLUMN_SAVED];
   }
 }
