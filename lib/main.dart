@@ -4,74 +4,127 @@
 // tapped this [Card]'s [InkWell] displays an "ink splash" that fills the
 // entire card.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_365_day_savings/widget/days_widget.dart';
 
 import 'dao/saving_state_dao.dart';
-import 'widget/progress_widget.dart';
+import 'home_screen.dart';
 
 void main() => runApp(MyApp());
 
-/// This Widget is the main application widget.
-class MyApp extends StatelessWidget {
-  static const String _title = '365 day savings';
+final String _title = '365 day savings';
 
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(primarySwatch: Colors.amber),
       title: _title,
-      home: Scaffold(
-        appBar: PreferredSize(
-            preferredSize: Size.fromHeight(30.0),
-            child: AppBar(title: Text(_title))),
-        body: ApplicationWidget(),
-      ),
+      home: MainScreen(),
     );
   }
 }
 
-class ApplicationWidget extends StatefulWidget {
+/// This Widget is the main application widget.
+class MainScreen extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
-    return ApplicationState();
+    ISavingStateDao dao = SavingStateDaoSqfliteImpl();
+    return new MainScreenState(dao: dao);
   }
 }
 
-class ApplicationState extends State<ApplicationWidget> {
-  ISavingStateDao dao = SavingStateDaoSqfliteImpl();
-  bool isInitialized = false;
+class MainScreenState extends State<MainScreen> {
+  final ISavingStateDao dao;
+  StreamController<Map<int, bool>> latestDataStreamController =
+      new StreamController<Map<int, bool>>();
+
+  MainScreenState({this.dao});
 
   @override
   void initState() {
-    dao.init().then((v) => setState(() => isInitialized = true));
+    super.initState();
+    dao.init().then((v) => dao.currentState()).then((v) => setState(() {
+          latestDataStreamController.add(v);
+        }));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isInitialized) {
-      return Center(child: CircularProgressIndicator());
-    }
-    return LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints viewportConstraints) {
-      double progressAreaHeight = 20;
-      double borderSpace = 5;
-      double daysWidgetHeight =
-          viewportConstraints.maxHeight - progressAreaHeight - borderSpace;
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ListView(
-          padding: EdgeInsets.only(left: 8, right: 8),
-          children: <Widget>[
-            Padding(
-                padding: EdgeInsets.only(bottom: borderSpace),
-                child: DaysWidget(
-                  dao: dao,
-                  height: daysWidgetHeight,
-                )),
-            ProgressWidget(dao: dao, height: progressAreaHeight),
-          ],
-        ),
+    Stream<Map<int, bool>> latestDataStream =
+        latestDataStreamController.stream.asBroadcastStream();
+    return Scaffold(
+      appBar: PreferredSize(
+          preferredSize: Size.fromHeight(40.0),
+          child: AppBar(
+            title: Text(_title),
+            actions: <Widget>[
+              new PopupMenuButton(
+                  onSelected: (PopupMenuAction action) =>
+                      action.action(context, dao, latestDataStreamController),
+                  itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<PopupMenuAction>(
+                            child: Text('Reset All'), value: restAllAction)
+                      ]),
+            ],
+          )),
+      body: body(latestDataStream),
+    );
+  }
+
+  @override
+  void dispose() {
+    latestDataStreamController.close();
+  }
+
+  Widget body(Stream<Map<int, bool>> latestDataStream) {
+    if (dao.initializeCompleted()) {
+      return HomeScreen(
+        dao: dao,
+        latestDataStreamConsumer: latestDataStreamController,
+        latestDataStream: latestDataStream,
       );
-    });
+    }
+    return Center(child: CircularProgressIndicator());
   }
 }
+
+class PopupMenuAction {
+  final String name;
+
+  final PopMenuSectionAction action;
+
+  PopupMenuAction({this.name, this.action});
+}
+
+typedef PopMenuSectionAction = void Function(
+    BuildContext context,
+    ISavingStateDao dao,
+    StreamController<Map<int, bool>> latestDataStreamController);
+
+var restAllAction = PopupMenuAction(
+  name: 'Reset',
+  action: (context, dao, latestDataStreamController) => {
+        showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+                  title: Text('Confirmation'),
+                  content: Text('Are you sure  you want to Reset All data?'),
+                  actions: <Widget>[
+                    FlatButton(
+                      child: Text('Reset All'),
+                      onPressed: () {
+                        dao.deleteAllRecords().then((v) {
+                          return dao
+                              .currentState()
+                              .then((current) =>
+                                  latestDataStreamController.add(current))
+                              .catchError((e) => print(e));
+                        }).then((v) => Navigator.pop(context));
+                      },
+                    )
+                  ],
+                ))
+      },
+);

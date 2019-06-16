@@ -6,9 +6,13 @@ import 'package:sqflite/sqflite.dart';
 class ISavingStateDao {
   Future<void> init() async => {};
 
+  bool initializeCompleted() => false;
+
   Future<Map<int, bool>> currentState() async => new Map();
 
-  void updateState(Map<int, bool> updatedState) => {};
+  Future<void> updateState(Map<int, bool> updatedState) async => {};
+
+  Future<void> deleteAllRecords() async => {};
 }
 
 class SavingStateDaoSqfliteImpl implements ISavingStateDao {
@@ -17,6 +21,7 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
 
   static const DB_NAME = "365DaySavings";
   Database db;
+  bool isInitializeCompleted = false;
 
   @override
   Future<void> init() async {
@@ -43,8 +48,16 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
                       })
                     })
               });
+    }).then((db) {
+      isInitializeCompleted = true;
+      return db;
     });
-    return null;
+    return db;
+  }
+
+  @override
+  bool initializeCompleted() {
+    return isInitializeCompleted;
   }
 
   @override
@@ -56,11 +69,27 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
   }
 
   @override
-  void updateState(Map<int, bool> updatedState) {
-    updatedState.forEach((id, saved) => db.update(DayRecord.TABLE_NAME, {
-          DayRecord.COLUMN_DAY: id,
-          DayRecord.COLUMN_SAVED: saved == true ? 1 : 0
-        }));
+  Future<void> updateState(Map<int, bool> updatedState) async {
+    if (updatedState.isEmpty) {
+      return null;
+    }
+    var updateFutures = updatedState.entries
+        .map((e) => db.update(
+            DayRecord.TABLE_NAME,
+            {
+              DayRecord.COLUMN_SAVED: SAVED,
+            },
+            where: '${DayRecord.COLUMN_DAY} = ?',
+            whereArgs: [e.key]))
+        .toList();
+    return Future.wait(updateFutures);
+  }
+
+  @override
+  Future<void> deleteAllRecords() async {
+    var databasesPath = await getDatabasesPath();
+    var path = join(databasesPath, DB_NAME);
+    return deleteDatabase(path).then((v) => init());
   }
 }
 
