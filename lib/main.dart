@@ -113,6 +113,12 @@ var restAllAction = PopupMenuAction(
                   content: Text('Are you sure  you want to Reset All data?'),
                   actions: <Widget>[
                     FlatButton(
+                      child: Text('No, Cancel'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    FlatButton(
                       child: Text('Reset All'),
                       onPressed: () {
                         dao.deleteAllRecords().then((v) {
@@ -123,7 +129,7 @@ var restAllAction = PopupMenuAction(
                               .catchError((e) => print(e));
                         }).then((v) => Navigator.pop(context));
                       },
-                    )
+                    ),
                   ],
                 ))
       },

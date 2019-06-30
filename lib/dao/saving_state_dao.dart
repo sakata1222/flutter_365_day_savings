@@ -4,15 +4,15 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ISavingStateDao {
-  Future<void> init() async => {};
+  Future<void> init() => null;
 
   bool initializeCompleted() => false;
 
-  Future<Map<int, bool>> currentState() async => new Map();
+  Future<Map<int, bool>> currentState() => null;
 
-  Future<void> updateState(Map<int, bool> updatedState) async => {};
+  Future<void> updateState(Map<int, bool> updatedState) => null;
 
-  Future<void> deleteAllRecords() async => {};
+  Future<void> deleteAllRecords() => null;
 }
 
 class SavingStateDaoSqfliteImpl implements ISavingStateDao {
@@ -24,35 +24,39 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
   bool isInitializeCompleted = false;
 
   @override
-  Future<void> init() async {
-    var databasesPath = await getDatabasesPath();
-    var path = join(databasesPath, DB_NAME);
-    try {
-      await Directory(databasesPath).create(recursive: true);
-    } catch (_) {}
-    db = await openDatabase(path, version: 1,
-        onCreate: (Database db, int version) async {
-      db
-          .execute('CREATE TABLE ' +
-              DayRecord.TABLE_NAME +
-              ' (' +
-              DayRecord.COLUMN_DAY +
-              ' INTEGER PRIMARY KEY, ' +
-              DayRecord.COLUMN_SAVED +
-              ' INTEGER)')
-          .then((v) => {
-                new List.generate(365, (i) => i + 1).forEach((i) => {
-                      db.insert(DayRecord.TABLE_NAME, {
-                        DayRecord.COLUMN_DAY: i,
-                        DayRecord.COLUMN_SAVED: NOT_SAVED
-                      })
-                    })
-              });
-    }).then((db) {
-      isInitializeCompleted = true;
-      return db;
-    });
-    return db;
+  Future<void> init() {
+    return getDatabasesPath()
+        .then((dbDir) {
+          try {
+            Directory(dbDir).deleteSync(recursive: true);
+          } catch (_) {}
+          return dbDir;
+        })
+        .then((dbDir) => join(dbDir, DB_NAME))
+        .then((dbPath) {
+          return openDatabase(dbPath, version: 1,
+              onCreate: (Database db, int version) {
+            db
+                .execute('CREATE TABLE ' +
+                    DayRecord.TABLE_NAME +
+                    ' (' +
+                    DayRecord.COLUMN_DAY +
+                    ' INTEGER PRIMARY KEY, ' +
+                    DayRecord.COLUMN_SAVED +
+                    ' INTEGER)')
+                .then((v) => {
+                      new List.generate(365, (i) => i + 1).forEach((i) => {
+                            db.insert(DayRecord.TABLE_NAME, {
+                              DayRecord.COLUMN_DAY: i,
+                              DayRecord.COLUMN_SAVED: NOT_SAVED
+                            })
+                          })
+                    });
+          }).then((db) {
+            this.db = db;
+            isInitializeCompleted = true;
+          });
+        });
   }
 
   @override
@@ -61,15 +65,18 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
   }
 
   @override
-  Future<Map<int, bool>> currentState() async {
-    List<Map<String, dynamic>> allRecords = await db.query(DayRecord.TABLE_NAME,
-        columns: [DayRecord.COLUMN_DAY, DayRecord.COLUMN_SAVED]);
-    return Map.fromIterable(allRecords.map((m) => DayRecord.fromMap(m)),
-        key: (r) => r.day, value: (r) => r.saved == SAVED);
+  Future<Map<int, bool>> currentState() {
+    return db.query(DayRecord.TABLE_NAME, columns: [
+      DayRecord.COLUMN_DAY,
+      DayRecord.COLUMN_SAVED
+    ]).then((allRecords) => Map.fromIterable(
+        allRecords.map((m) => DayRecord.fromMap(m)),
+        key: (r) => r.day,
+        value: (r) => r.saved == SAVED));
   }
 
   @override
-  Future<void> updateState(Map<int, bool> updatedState) async {
+  Future<void> updateState(Map<int, bool> updatedState) {
     if (updatedState.isEmpty) {
       return null;
     }
@@ -86,10 +93,13 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
   }
 
   @override
-  Future<void> deleteAllRecords() async {
-    var databasesPath = await getDatabasesPath();
-    var path = join(databasesPath, DB_NAME);
-    return deleteDatabase(path).then((v) => init());
+  Future<void> deleteAllRecords() {
+    return db
+        .close()
+        .then((v) => getDatabasesPath())
+        .then((path) => join(path, DB_NAME))
+        .then((db) => deleteDatabase(db))
+        .then((db) => init());
   }
 }
 
