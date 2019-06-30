@@ -7,4 +7,3 @@
 ## TODO
 
 - Undo
-- Refresh screen after reset
