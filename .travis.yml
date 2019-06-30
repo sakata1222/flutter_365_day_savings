@@ -1,0 +1,62 @@
+os: osx
+language: generic
+osx_image: xcode10.2
+
+branches:
+  only:
+    - "/^v[0-9].*$/"
+
+env:
+  global:
+    - ANDROID_SDK_ROOT='/Users/travis/android_sdk'
+    - ANDROID_HOME='/Users/travis/android_sdk'
+
+before_script:
+  - pip install six > /dev/null
+  - brew update > /dev/null
+  - brew install --HEAD usbmuxd > /dev/null
+  - brew install --HEAD libimobiledevice > /dev/null
+  - brew install ideviceinstaller > /dev/null
+  - brew install ios-deploy > /dev/null
+  - brew tap AdoptOpenJDK/openjdk > /dev/null
+  - brew cask install adoptopenjdk8 > /dev/null
+  - export JAVA_HOME=`/usr/libexec/java_home -v "1.8"` > /dev/null
+  - PATH=${JAVA_HOME}/bin:${PATH} > /dev/null
+  - git clone https://github.com/flutter/flutter.git -b beta --depth 1 > /dev/null
+  - curl -L -o android_sdk.zip https://dl.google.com/android/repository/sdk-tools-darwin-4333796.zip && unzip -o -d android_sdk android_sdk.zip > /dev/null
+  - yes | ./android_sdk/tools/bin/sdkmanager --licenses
+  - ./android_sdk/tools/bin/sdkmanager "tools" > /dev/null
+  - ./android_sdk/tools/bin/sdkmanager "build-tools;29.0.0" > /dev/null
+  - ./android_sdk/tools/bin/sdkmanager "platforms;android-29" > /dev/null
+  - ./android_sdk/tools/bin/sdkmanager "platform-tools" > /dev/null
+  - ./android_sdk/tools/bin/sdkmanager "extras;android;m2repository" > /dev/null
+  - ./android_sdk/tools/bin/sdkmanager "extras;google;m2repository" > /dev/null
+  - ./flutter/bin/flutter config --android-sdk ~/android_sdk > /dev/null
+  - ./flutter/bin/flutter doctor
+
+script:
+  - ./flutter/bin/flutter build ios
+  - mkdir -p ios_release/Payload
+  - mv build/ios/iphoneos/Runner.app ios_release/Payload/
+  - pushd ios_release
+  - zip -ry 365days_saving.ipa Payload
+  - popd
+#  - ./flutter/bin/flutter build apk
+
+before_deploy:
+  - mkdir github_release
+  - cp ios_release/365days_saving.ipa github_release
+#  - cp build/app/outputs/apk/app-release.apk github_release
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: aafOVFA6Xgu6PRXAcvbWMdbQlI4xWmh3mhvzqe/bCIk1voq+/2STxGFZBx8c3fHvV4tzSQHxxTmOIZc5Mg5wlF7pCHDsOAvCI467yzpA4KMJ++6OSPuuporYAKvu8bACuCk9IJrKJjACJ4WFbmasPb/zszJAqgJu5NyXd0CtFoyN8Q0EK259+Gvsd4skUQTgQZyZ+iMwqkDnukLgsNCM2KOj+5bNKUseCquDr1lake50hYG7dbtiQ5q8XTOwoztAib43ui6RRbqKKv1bJb8lAPWMAjpWscY4r26idNF7PXqVpAHOzGBZFXAxEK4o0NNMaxnSXkFraKK2EYT3SBlv8WqdJkkvmTZOpbO4AG444jP5z0AiXbOx23mYqGlQZHoYXjbC7B0KptkNgGLDdck2w7V0Raj9OInl/e+dvIasg96oqguMAVkVxNB5dJufI57IdY5ahnK+xt8dbg11zov6bwvKKlEngDHTa8Gv4dsCj7e0UXpOorcodHd9qv5wdhSEeAalq/pikE81jSmbvNJv+mT6y3VIOfc2af1UBvE72Hx49V+ZeZJULa766ovbSb0yDODJoxwqdHpaKD9uCRLbIHVBRejq4c/3KJAsAiIWnZVkyIPK1b5X3YpHhJkpRDfWFWm3rTwI6wi2U8aOug0ZZT7iDl325E14WmbS/OmRF78=
+  file_glob: true
+  file:
+    - github_release/*
+  on:
+    tags: true
+    all_branches: true
+    condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
