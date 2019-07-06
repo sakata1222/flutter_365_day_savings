@@ -36,6 +36,9 @@ class RegisterMoneyState extends State<RegisterMoneyWidget> {
 
   Map<int, bool> _pressed;
 
+  int crossAxisCount = 10;
+  double buttonTextSize = 10;
+
   RegisterMoneyState(
       {this.dao,
       this.latestDataStreamConsumer,
@@ -83,110 +86,124 @@ class RegisterMoneyState extends State<RegisterMoneyWidget> {
   Widget build(BuildContext context) {
     double selectionResultArea = 30;
 
-    return StreamBuilder<Map<int, bool>>(
-      stream: latestDataStream,
-      builder: (context, asyncSnapshot) {
-        if (!asyncSnapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
-        }
-        var currentState = asyncSnapshot.data;
-        var days = new List.generate(365, (i) => i + 1)
-            .map((i) => RaisedButton(
-                padding: EdgeInsets.only(top: 1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                ),
-                onPressed: buildAnPressedAction(i, currentState[i]),
-                color: decideColor(i, currentState[i]),
-                child: Container(
-                    padding: EdgeInsets.all(1),
-                    child: Text(buildButtonText(i, currentState[i]),
-                        textAlign: TextAlign.center,
-                        style: new TextStyle(
-                          fontSize: 10.0,
-                        )))))
-            .toList();
-
-        int selectedCount;
-        int totalSaving;
-        if (_pressed.isEmpty) {
-          selectedCount = 0;
-          totalSaving = 0;
-        } else {
-          selectedCount = _pressed.entries.where((e) => e.value).length;
-          if (selectedCount > 0) {
-            totalSaving = _pressed.entries
-                .where((e) => e.value)
-                .map((e) => e.key)
-                .reduce((v1, v2) => v1 + v2);
-          } else {
-            totalSaving = 0;
-          }
-        }
-
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints viewportConstraints) {
-            return Container(
-                padding: EdgeInsets.all(0),
-                margin: EdgeInsets.all(0),
-                height: height,
-                child: ListView(children: <Widget>[
-                  SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: height),
-                      child: Container(
-                        height: height - selectionResultArea,
-                        child: GridView.count(
-                          primary: false,
-                          padding: EdgeInsets.all(3),
-                          childAspectRatio: 2.0,
-                          mainAxisSpacing: 3,
-                          crossAxisSpacing: 3,
-                          crossAxisCount: 10,
-                          children: days,
-                        ),
-                      ),
+    return GestureDetector(
+        onScaleUpdate: (scaleDetails) {
+          setState(() {
+            if (scaleDetails.scale >= 1.3) {
+              crossAxisCount = 5;
+              buttonTextSize = 20;
+            }
+            if (scaleDetails.scale <= 0.7) {
+              crossAxisCount = 10;
+              buttonTextSize = 10;
+            }
+          });
+        },
+        child: StreamBuilder<Map<int, bool>>(
+          stream: latestDataStream,
+          builder: (context, asyncSnapshot) {
+            if (!asyncSnapshot.hasData) {
+              return Center(child: CircularProgressIndicator());
+            }
+            var currentState = asyncSnapshot.data;
+            var days = new List.generate(365, (i) => i + 1)
+                .map((i) => RaisedButton(
+                    padding: EdgeInsets.only(top: 1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
                     ),
-                  ),
-                  Container(
+                    onPressed: buildAnPressedAction(i, currentState[i]),
+                    color: decideColor(i, currentState[i]),
+                    child: Container(
+                        padding: EdgeInsets.all(1),
+                        child: Text(buildButtonText(i, currentState[i]),
+                            textAlign: TextAlign.center,
+                            style: new TextStyle(
+                              fontSize: buttonTextSize,
+                            )))))
+                .toList();
+
+            int selectedCount;
+            int totalSaving;
+            if (_pressed.isEmpty) {
+              selectedCount = 0;
+              totalSaving = 0;
+            } else {
+              selectedCount = _pressed.entries.where((e) => e.value).length;
+              if (selectedCount > 0) {
+                totalSaving = _pressed.entries
+                    .where((e) => e.value)
+                    .map((e) => e.key)
+                    .reduce((v1, v2) => v1 + v2);
+              } else {
+                totalSaving = 0;
+              }
+            }
+
+            return LayoutBuilder(
+              builder:
+                  (BuildContext context, BoxConstraints viewportConstraints) {
+                return Container(
                     padding: EdgeInsets.all(0),
                     margin: EdgeInsets.all(0),
-                    height: selectionResultArea,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        Expanded(
-                            child: Text('Selected : ' +
-                                selectedCount.toString() +
-                                ' days')),
-                        Expanded(
-                            child: Center(
-                                child:
-                                    Text('\u00A5' + totalSaving.toString()))),
-                        Padding(
-                            padding: EdgeInsets.all(4),
-                            child: RaisedButton(
-                              color: Colors.amber[800],
-                              onPressed: () => {
-                                    setState(() {
-                                      dao.updateState(_pressed).then((v) => dao
-                                          .currentState()
-                                          .then((result) => setState(() {
-                                                _pressed.clear();
-                                                latestDataStreamConsumer
-                                                    .add(result);
-                                              })));
-                                    })
-                                  },
-                              child: Text('Save Money'),
-                            ))
-                      ],
-                    ),
-                  )
-                ]));
+                    height: height,
+                    child: ListView(children: <Widget>[
+                      SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxHeight: height),
+                          child: Container(
+                            height: height - selectionResultArea,
+                            child: GridView.count(
+                              primary: false,
+                              padding: EdgeInsets.all(3),
+                              childAspectRatio: 2.0,
+                              mainAxisSpacing: 3,
+                              crossAxisSpacing: 3,
+                              crossAxisCount: crossAxisCount,
+                              children: days,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(0),
+                        margin: EdgeInsets.all(0),
+                        height: selectionResultArea,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: <Widget>[
+                            Expanded(
+                                child: Text('Selected : ' +
+                                    selectedCount.toString() +
+                                    ' days')),
+                            Expanded(
+                                child: Center(
+                                    child: Text(
+                                        '\u00A5' + totalSaving.toString()))),
+                            Padding(
+                                padding: EdgeInsets.all(4),
+                                child: RaisedButton(
+                                  color: Colors.amber[800],
+                                  onPressed: () => {
+                                        setState(() {
+                                          dao.updateState(_pressed).then((v) =>
+                                              dao.currentState().then(
+                                                  (result) => setState(() {
+                                                        _pressed.clear();
+                                                        latestDataStreamConsumer
+                                                            .add(result);
+                                                      })));
+                                        })
+                                      },
+                                  child: Text('Save Money'),
+                                ))
+                          ],
+                        ),
+                      )
+                    ]));
+              },
+            );
           },
-        );
-      },
-    );
+        ));
   }
 }
