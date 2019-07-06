@@ -39,21 +39,21 @@ class MainScreenState extends State<MainScreen> {
   final ISavingStateDao dao;
   StreamController<Map<int, bool>> latestDataStreamController =
       new StreamController<Map<int, bool>>();
+  Stream<Map<int, bool>> latestDataStream;
 
   MainScreenState({this.dao});
 
   @override
   void initState() {
     super.initState();
-    dao.init().then((v) => dao.currentState()).then((v) => setState(() {
-          latestDataStreamController.add(v);
-        }));
+    latestDataStream = latestDataStreamController.stream.asBroadcastStream();
   }
 
   @override
   Widget build(BuildContext context) {
-    Stream<Map<int, bool>> latestDataStream =
-        latestDataStreamController.stream.asBroadcastStream();
+    dao.init().then((v) => dao.currentState()).then((v) => setState(() {
+          latestDataStreamController.add(v);
+        }));
     return Scaffold(
       appBar: PreferredSize(
           preferredSize: Size.fromHeight(40.0),
