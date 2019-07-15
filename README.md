@@ -2,7 +2,13 @@
 
 365 day savings
 
-![image](https://user-images.githubusercontent.com/6317652/59565452-c10b2680-908e-11e9-8eb6-20ea20cbfa17.gif)
+![image](https://user-images.githubusercontent.com/6317652/61222342-7a741f00-a755-11e9-9a95-74887a9621fc.gif)
+
+## Feature
+
+- Save progress
+- Pinch in/out
+- Reset All Data
 
 ## TODO
 
