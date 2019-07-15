@@ -81,6 +81,7 @@ class SavingStateDaoSqfliteImpl implements ISavingStateDao {
       return null;
     }
     var updateFutures = updatedState.entries
+        .where((e) => e.value)
         .map((e) => db.update(
             DayRecord.TABLE_NAME,
             {
